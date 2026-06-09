@@ -61,6 +61,15 @@ with col3:
     ):
         st.switch_page("pages/activity_logs.py")
 
+with col4:
+    if st.button(
+        "🤖 Model Monitor",
+        use_container_width=True
+    ):
+        st.switch_page(
+            "pages/model_monitor.py"
+        )
+
 st.markdown("---")
 
 st.success(
