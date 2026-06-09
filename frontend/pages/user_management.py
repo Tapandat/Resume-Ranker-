@@ -20,28 +20,9 @@ if st.session_state.get("role") != "admin":
 st.title("👥 User Management")
 st.markdown("---")
 
-# Temporary data
-users = [
-    {
-        "Name": "Admin",
-        "Email": "admin@gmail.com",
-        "Role": "admin",
-        "Status": "active"
-    },
-    {
-        "Name": "John Doe",
-        "Email": "john@gmail.com",
-        "Role": "user",
-        "Status": "active"
-    },
-    {
-        "Name": "Alice",
-        "Email": "alice@gmail.com",
-        "Role": "user",
-        "Status": "blocked"
-    }
-]
-
+requests.get(
+    "http://127.0.0.1:8000/admin/users"
+)
 df = pd.DataFrame(users)
 
 st.subheader("Registered Users")
