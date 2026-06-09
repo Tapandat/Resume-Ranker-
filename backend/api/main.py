@@ -20,9 +20,12 @@ from pydantic import BaseModel
 
 from backend.core.parser import parse_resume_batch
 from backend.core.scoring_engine import score_resumes, ResumeScore
+from backend.services.history_service import save_ranking
 from backend.core.classifier import (
-    RoleClassifier, generate_synthetic_jd,
-    skill_gap_for_role, ROLE_CORPUS,
+    RoleClassifier,
+    generate_synthetic_jd,
+    skill_gap_for_role,
+    ROLE_CORPUS,
 )
 from backend.api.auth import router as auth_router
 from backend.api.admin import router as admin_router
@@ -48,6 +51,7 @@ app.include_router(admin_router)
 
 
 # ── Pydantic models ────────────────────────────────────────────────────────────
+
 class ProjectEntry(BaseModel):
     title:            str
     description:      str
@@ -76,8 +80,8 @@ class CandidateResult(BaseModel):
     matched_keywords:    list[str]
     skills:              dict[str, list[str]]
     all_skills:          list[str]
-    projects:            list[ProjectEntry]       # NEW
-    skill_gap:           Optional[SkillGap]       # NEW
+    projects:            list[ProjectEntry]
+    skill_gap:           Optional[SkillGap]
     word_count:          int
     explanation:         str
 
@@ -91,6 +95,7 @@ class RankResponse(BaseModel):
 
 
 # ── Endpoints ──────────────────────────────────────────────────────────────────
+
 @app.get("/api/health")
 def health():
     return {"status": "ok", "version": "2.2.0"}
@@ -127,16 +132,18 @@ async def rank_resumes(
         raise HTTPException(status_code=422, detail="Could not extract text from any file.")
 
     # 2. JD mode
-    jd_mode       = "provided"
-    detected_role: Optional[str] = None
-    role_preds:    dict[str, dict] = {}
+    jd_mode        = "provided"
+    detected_role: Optional[str]      = None
+    role_preds:    dict[str, dict]    = {}
 
     if not jd_text or not jd_text.strip():
         jd_mode    = "classifier"
         classifier = RoleClassifier()
+
         for p in valid:
             pred = classifier.predict(p["clean_text"])
             role_preds[p["filename"]] = pred
+
         top_role      = Counter(v["predicted_role"] for v in role_preds.values()).most_common(1)[0][0]
         detected_role = top_role
         jd_text       = generate_synthetic_jd(top_role)
@@ -158,10 +165,18 @@ async def rank_resumes(
 
     # 4. Build response
     ranked_results = []
+
     for rank, score in enumerate(scored, start=1):
         filename   = id_to_filename.get(score.candidate_id, "unknown")
         pred_info  = role_preds.get(filename, {})
         parsed_doc = filename_to_parsed.get(filename, {})
+
+        save_ranking(
+            candidate_name=filename,
+            score=score.final_score,
+            skills=parsed_doc.get("all_skills", []),
+            job_description=jd_text,
+        )
 
         # Determine role for skill gap (predicted or job_title if provided)
         gap_role = (
@@ -169,6 +184,7 @@ async def rank_resumes(
             or job_title
             or detected_role
         )
+
         skill_gap = None
         if gap_role and gap_role in ROLE_CORPUS:
             skill_gap = skill_gap_for_role(
