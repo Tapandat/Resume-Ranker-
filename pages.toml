@@ -1,0 +1,9 @@
+[[pages]]
+path = "frontend/login.py"
+name = "Login"
+icon = "🔐"
+
+[[pages]]
+path = "frontend/dashboard.py"
+name = "Dashboard"
+icon = "🎯"
