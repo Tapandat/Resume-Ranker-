@@ -13,7 +13,6 @@ from __future__ import annotations
 import requests
 import streamlit as st
 from pathlib import Path
-from urllib.parse import urlencode
 
 API_BASE     = "http://localhost:8000"
 GOOGLE_LOGIN = f"{API_BASE}/auth/google"
@@ -31,7 +30,7 @@ st.set_page_config(
     layout="centered",
 )
 
-# ── Hide Streamlit's auto-generated multipage nav sidebar ──────────────────────
+# ── Hide Streamlit's auto-generated multipage nav sidebar ─────────────────────
 st.markdown("""
 <style>
 [data-testid="stSidebar"]        { display: none !important; }
@@ -109,23 +108,39 @@ html, body, [class*="css"], .stApp {
 </style>
 """, unsafe_allow_html=True)
 
+# ── Dashboard pages ────────────────────────────────────────────────────────────
+USER_DASHBOARD  = "pages/dashboard.py"
+ADMIN_DASHBOARD = "pages/admin_dashboard.py"
+
+# ── Session variables ──────────────────────────────────────────────────────────
+if "token" not in st.session_state:
+    st.session_state["token"] = None
+
+if "user" not in st.session_state:
+    st.session_state["user"] = None
+
+if "role" not in st.session_state:
+    st.session_state["role"] = None
 
 # ── Handle OAuth return (token in URL query param) ────────────────────────────
 params = st.query_params
-if "token" in params and "token" not in st.session_state:
+
+if "token" in params and st.session_state["token"] is None:
     st.session_state["token"] = params["token"]
     st.session_state["user"]  = {
-        "name":  params.get("name",  "User"),
+        "name":  params.get("name", "User"),
         "email": params.get("email", ""),
     }
+    st.session_state["role"] = "user"  # Google users are normal users by default
     st.query_params.clear()
-    st.switch_page("pages/dashboard.py")
+    st.switch_page(USER_DASHBOARD)
 
-
-# ── Already logged in — redirect straight to dashboard ───────────────────────
-if st.session_state.get("token"):
-    st.switch_page("pages/dashboard.py")
-
+# ── Already logged in — redirect to the appropriate dashboard ─────────────────
+if st.session_state["token"]:
+    if st.session_state["role"] == "admin":
+        st.switch_page(ADMIN_DASHBOARD)
+    else:
+        st.switch_page(USER_DASHBOARD)
 
 # ── UI ─────────────────────────────────────────────────────────────────────────
 col = st.columns([1, 2, 1])[1]
@@ -174,7 +189,13 @@ with col:
                             data = resp.json()
                             st.session_state["token"] = data["access_token"]
                             st.session_state["user"]  = data["user"]
-                            st.switch_page("pages/dashboard.py")
+                            st.session_state["role"]  = data["user"].get("role", "user")
+
+                            if st.session_state["role"] == "admin":
+                                st.success("Welcome Admin!")
+                                st.switch_page(ADMIN_DASHBOARD)
+                            else:
+                                st.switch_page(USER_DASHBOARD)
                         else:
                             try:
                                 detail = resp.json().get("detail", "Login failed.")
@@ -185,7 +206,7 @@ with col:
                         err_box.error("❌ Cannot reach API. Make sure the backend is running.")
 
     with tab_register:
-        r_name     = st.text_input("Full Name",        key="reg_name",  placeholder="Jane Doe")
+        r_name     = st.text_input("Full Name",         key="reg_name",  placeholder="Jane Doe")
         r_email    = st.text_input("Email",             key="reg_email", placeholder="you@example.com")
         r_password = st.text_input("Password",          key="reg_pass",  type="password", placeholder="Min 6 characters")
         r_confirm  = st.text_input("Confirm Password",  key="reg_conf",  type="password", placeholder="Repeat password")
@@ -210,7 +231,9 @@ with col:
                             data = resp.json()
                             st.session_state["token"] = data["access_token"]
                             st.session_state["user"]  = data["user"]
-                            st.switch_page("pages/dashboard.py")
+                            st.session_state["role"]  = data["user"].get("role", "user")
+                            st.success("Account created successfully!")
+                            st.switch_page(USER_DASHBOARD)
                         else:
                             try:
                                 detail = resp.json().get("detail", "Registration failed.")
