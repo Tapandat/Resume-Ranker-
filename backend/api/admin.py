@@ -11,6 +11,9 @@ promote_user,
 block_user,
 unblock_user
 )
+from backend.services.analytics_service import (
+    get_analytics
+)
 
 router = APIRouter(
 prefix="/admin",
@@ -24,6 +27,11 @@ return get_logs()
 @router.get("/users")
 def users():
 return get_all_users()
+
+@router.get("/analytics")
+def analytics():
+return get_analytics()
+
 
 @router.delete("/users/{email}")
 def remove_user(email: str):
