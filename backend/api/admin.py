@@ -15,6 +15,10 @@ from backend.services.analytics_service import (
     get_analytics
 )
 
+from backend.services.model_monitor_service import (
+get_model_stats
+)
+
 router = APIRouter(
 prefix="/admin",
 tags=["admin"]
@@ -71,4 +75,8 @@ unblock_user(email)
 return {
     "message": "User unblocked"
 }
-```
+
+@router.get("/model-monitor")
+def model_monitor():
+return get_model_stats()
+
