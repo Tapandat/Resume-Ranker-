@@ -25,6 +25,7 @@ from backend.core.classifier import (
     skill_gap_for_role, ROLE_CORPUS,
 )
 from backend.api.auth import router as auth_router
+from backend.api.admin import router as admin_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -43,6 +44,7 @@ app.add_middleware(
 )
 
 app.include_router(auth_router)
+app.include_router(admin_router)
 
 
 # ── Pydantic models ────────────────────────────────────────────────────────────
